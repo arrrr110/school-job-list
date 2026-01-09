@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import PaymentUnlockComponent from './components/PaymentUnlockComponent';
 import WebViewComponent from './components/WebViewComponent';
 
@@ -65,7 +65,6 @@ export default function Index() {
           url="https://yal2at57cvq.feishu.cn/base/GtSLbyyR3aCENOsJYC6cdlsVnih?table=tblH4au5rnBcqHgJ&view=vew8PFC7nG"
           isUnlocked={isUnlocked}
           onStatusChange={setIsUnlocked}
-          onShowPayment={handleShowPayment}
         />
       </View>
       

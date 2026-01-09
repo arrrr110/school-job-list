@@ -1,33 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-// 条件导入 WebView
-let WebView: any = null;
-if (Platform.OS !== 'web') {
-  try {
-    const WebViewModule = require('react-native-webview');
-    WebView = WebViewModule.WebView;
-  } catch (error) {
-    console.warn('WebView not available:', error);
-  }
-}
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import WeChatNativePay from './WeChatNativePay';
 
 interface WebViewComponentProps {
   url?: string;
   isUnlocked?: boolean;
   onStatusChange?: (unlocked: boolean) => void;
-  onShowPayment?: () => void;
 }
 
 const WebViewComponent: React.FC<WebViewComponentProps> = ({ 
   url = "https://yal2at57cvq.feishu.cn/base/GtSLbyyR3aCENOsJYC6cdlsVnih?table=tblH4au5rnBcqHgJ&view=vew8PFC7nG", 
   isUnlocked = false,
   onStatusChange,
-  onShowPayment
 }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
-  const [loading, setLoading] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const originalSrc = "https://yal2at57cvq.feishu.cn/base/GtSLbyyR3aCENOsJYC6cdlsVnih?table=tblH4au5rnBcqHgJ&view=vew8PFC7nG";
   const loginSrc = "https://ai.feishu.cn/wiki/OarwwHBJii4K7KkU4LuczV5onTd";
@@ -39,9 +28,15 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
   useEffect(() => {
     // 根据解锁状态更新URL
     if (isUnlocked) {
-      setCurrentUrl(originalSrc);
+      setIsLoading(true);
+      // 模拟解锁后的加载时间，然后更新URL
+      setTimeout(() => {
+        setCurrentUrl(originalSrc);
+        setIsLoading(false);
+      }, 1500); // 1.5秒的加载时间
     } else {
       setCurrentUrl(loginSrc);
+      setIsLoading(false);
     }
   }, [isUnlocked]);
 
@@ -58,92 +53,86 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
     }
   };
 
-  const handleMessage = (event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'payment_success') {
-        onStatusChange && onStatusChange(true);
-      }
-    } catch (error) {
-      console.log('消息解析失败:', error);
-    }
-  };
-
   const handleShowPayment = () => {
-    if (onShowPayment) {
-      onShowPayment();
+    setShowPaymentModal(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setShowPaymentModal(false);
+  };
+
+  const handleTestPayment = async () => {
+    try {
+      // 模拟支付成功
+      await AsyncStorage.setItem('feishu_doc_paid', 'true');
+      setShowPaymentModal(false);
+      
+      // 通知父组件更新解锁状态
+      if (onStatusChange) {
+        onStatusChange(true);
+      }
+      
+      Alert.alert('🎉 支付成功！', '已解锁完整内容');
+    } catch (error) {
+      console.error('支付测试失败:', error);
+      Alert.alert('错误', '支付测试失败，请重试');
     }
   };
 
-  // Web平台的替代渲染
-  if (Platform.OS === 'web') {
     return (
-      <View style={styles.container}>
-        <iframe
-          src={currentUrl}
-          style={{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-          }}
-          allowFullScreen
-          title="Feishu Document"
-        />
+    <>
+       <View style={styles.container}>
+         <iframe
+           src={currentUrl}
+           style={{
+             width: '100%',
+             height: '100%',
+             border: 'none',
+           }}
+           allowFullScreen
+           title="Feishu Document"
+         />
+         {isLoading && (
+           <View style={styles.loadingOverlay}>
+             <View style={styles.loadingContainer}>
+               <Text style={styles.loadingSpinner}>🔓</Text>
+               <Text style={styles.loadingText}>解锁中...</Text>
+               <Text style={styles.loadingSubText}>正在为您加载完整内容</Text>
+             </View>
+           </View>
+         )}
         {!isUnlocked && (
           <View style={styles.lockedIndicator}>
-            <Text style={styles.lockedText}>秋招+实习汇总表(示例表格)</Text>
-            <Text style={styles.lockedText}>付费解锁完整功能</Text>
-             <TouchableOpacity 
-               style={styles.wechatButton} 
-               onPress={handleShowPayment}
-             >
-              <Text style={styles.wechatButtonText}>继续支付</Text>
+            <View style={styles.textContainer}>
+              <Text style={styles.lockedText}>春/秋招+实习汇总表(示例表格)</Text>
+              <Text style={styles.lockedText}>付费解锁完整功能</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.wechatButton} 
+              onPress={handleShowPayment}
+            >
+              <Text style={styles.wechatButtonText}>继续支付 ¥9.99</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
-    );
-  }
 
-  // React Native平台的WebView
-  if (WebView) {
-    return (
-      <View style={styles.container}>
-        <WebView
-          source={{ uri: currentUrl }}
-          style={styles.webview}
-          javaScriptEnabled={true}
-          domStorageEnabled={true}
-          startInLoadingState={true}
-          allowsBackForwardNavigationGestures={true}
-          onMessage={handleMessage}
-          onLoadEnd={() => setLoading(false)}
-        />
-        {loading && (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>加载中...</Text>
-          </View>
-        )}
-        {!isUnlocked && (
-          <View style={styles.lockedIndicator}>
-            <Text style={styles.lockedText}>🔒 付费解锁完整功能</Text>
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  // WebView不可用时的fallback
-  return (
-    <View style={styles.container}>
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>❌ WebView组件不支持当前平台</Text>
-        <Text style={styles.urlText}>文档链接: {currentUrl}</Text>
-        <Text style={styles.instructionText}>
-          {isUnlocked ? '已解锁' : '未解锁 - 请访问浏览器查看'}
-        </Text>
-      </View>
-    </View>
+      {/* 微信Native支付弹窗 */}
+      <WeChatNativePay
+        visible={showPaymentModal}
+        amount={100} // 100分 = 1元
+        onSuccess={() => {
+          onStatusChange && onStatusChange(true);
+          setShowPaymentModal(false);
+          Alert.alert('🎉 支付成功！', '已解锁完整内容');
+        }}
+        onFailure={(error) => {
+          console.error('微信支付失败:', error);
+          Alert.alert('支付失败', error);
+        }}
+        onClose={() => setShowPaymentModal(false)}
+      />
+    </>
   );
 };
 
@@ -151,9 +140,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
-  },
-  webview: {
-    flex: 1,
   },
   lockedIndicator: {
     flexDirection: 'row',
@@ -175,12 +161,14 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  textContainer: {
+    flex: 1,
+  },
   lockedText: {
     color: '#ff6b6b',
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 8,
+    textAlign: 'left',
   },
   wechatButton: {
     backgroundColor: '#07C160',
@@ -194,45 +182,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  loadingContainer: {
+  // 解锁loading样式
+  loadingOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    zIndex: 2,
+    zIndex: 10,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    padding: 40,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 10,
+    minWidth: 200,
+  },
+  loadingSpinner: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   loadingText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  errorText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#e74c3c',
-    textAlign: 'center',
-    marginBottom: 15,
-  },
-  urlText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 10,
-    fontFamily: 'monospace',
-  },
-  instructionText: {
-    fontSize: 14,
     color: '#333',
+    marginBottom: 8,
+  },
+  loadingSubText: {
+    fontSize: 14,
+    color: '#666',
     textAlign: 'center',
   },
 });
