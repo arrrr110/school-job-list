@@ -103,8 +103,8 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* 半透明背景 */}
-      <TouchableOpacity style={styles.backgroundOverlay} onPress={onClose} />
+      {/* 半透明背景 - 移除了onPress事件 */}
+      <View style={styles.backgroundOverlay} />
       
       {/* 付费组件主体 */}
       <View style={styles.paymentPanel}>
@@ -129,19 +129,16 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
                 currentStatus === 'paid' && styles.wechatButtonTextDisabled
               ]}>
                 {currentStatus === 'paid' ? '✅ 已付费' : 
-                 isProcessing ? '处理中...' : '💳 微信支付'}
+                 isProcessing ? '处理中...' : '💳 微信支付 ¥9.99'}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <Text style={styles.closeButtonText}>关闭,先了解一下示例表格再做决定</Text>
+        </TouchableOpacity>
           </View>
         </View>
-
-        <Text style={styles.statusText}>
-          {currentStatus === 'paid' ? '✅ 付费成功！已解锁完整内容' : '⏳ 等待付费解锁...'}
-        </Text>
         
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>稍后再说</Text>
-        </TouchableOpacity>
+
       </View>
 
       {/* 支付二维码模态框 */}
@@ -253,7 +250,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: 'red',
     marginTop: 5,
   },
   wechatButtonDisabled: {

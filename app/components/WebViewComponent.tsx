@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // 条件导入 WebView
 let WebView: any = null;
@@ -17,12 +17,14 @@ interface WebViewComponentProps {
   url?: string;
   isUnlocked?: boolean;
   onStatusChange?: (unlocked: boolean) => void;
+  onShowPayment?: () => void;
 }
 
 const WebViewComponent: React.FC<WebViewComponentProps> = ({ 
   url = "https://yal2at57cvq.feishu.cn/base/GtSLbyyR3aCENOsJYC6cdlsVnih?table=tblH4au5rnBcqHgJ&view=vew8PFC7nG", 
   isUnlocked = false,
-  onStatusChange
+  onStatusChange,
+  onShowPayment
 }) => {
   const [currentUrl, setCurrentUrl] = useState(url);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,12 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
     }
   };
 
+  const handleShowPayment = () => {
+    if (onShowPayment) {
+      onShowPayment();
+    }
+  };
+
   // Web平台的替代渲染
   if (Platform.OS === 'web') {
     return (
@@ -82,7 +90,16 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
           title="Feishu Document"
         />
         {!isUnlocked && (
-          <View style={styles.lockedOverlay} />
+          <View style={styles.lockedIndicator}>
+            <Text style={styles.lockedText}>秋招+实习汇总表(示例表格)</Text>
+            <Text style={styles.lockedText}>付费解锁完整功能</Text>
+             <TouchableOpacity 
+               style={styles.wechatButton} 
+               onPress={handleShowPayment}
+             >
+              <Text style={styles.wechatButtonText}>继续支付</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -90,23 +107,6 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
 
   // React Native平台的WebView
   if (WebView) {
-    if (!isUnlocked) {
-      return (
-        <View style={styles.container}>
-          <WebView
-            source={{ uri: currentUrl }}
-            style={styles.webview}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            startInLoadingState={true}
-            onMessage={handleMessage}
-            onLoadEnd={() => setLoading(false)}
-          />
-          <View style={styles.lockedOverlay} />
-        </View>
-      );
-    }
-
     return (
       <View style={styles.container}>
         <WebView
@@ -122,6 +122,11 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
         {loading && (
           <View style={styles.loadingContainer}>
             <Text style={styles.loadingText}>加载中...</Text>
+          </View>
+        )}
+        {!isUnlocked && (
+          <View style={styles.lockedIndicator}>
+            <Text style={styles.lockedText}>🔒 付费解锁完整功能</Text>
           </View>
         )}
       </View>
@@ -150,16 +155,44 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
   },
-  lockedOverlay: {
+  lockedIndicator: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    top: 10,
+    left: 10,
+    right: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ff6b6b',
+    padding: 12,
     zIndex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  lockedText: {
+    color: '#ff6b6b',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  wechatButton: {
+    backgroundColor: '#07C160',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  wechatButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   loadingContainer: {
     position: 'absolute',

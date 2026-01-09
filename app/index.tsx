@@ -65,6 +65,7 @@ export default function Index() {
           url="https://yal2at57cvq.feishu.cn/base/GtSLbyyR3aCENOsJYC6cdlsVnih?table=tblH4au5rnBcqHgJ&view=vew8PFC7nG"
           isUnlocked={isUnlocked}
           onStatusChange={setIsUnlocked}
+          onShowPayment={handleShowPayment}
         />
       </View>
       
