@@ -12,10 +12,11 @@ import {
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { PAYMENT_CONFIG } from '../config/payment';
 
 interface WeChatNativePayProps {
   visible: boolean;
-  amount: number; // 支付金额（单位：分）
+  amount?: number; // 支付金额（单位：分），可选，默认使用配置文件中的值
   onSuccess: () => void;
   onFailure?: (error: string) => void;
   onClose: () => void;
@@ -36,14 +37,14 @@ const getApp = () => {
 
 const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
   visible,
-  amount = 100, // 默认100分（1元）
+  amount = PAYMENT_CONFIG.AMOUNT, // 使用配置文件中的默认金额
   onSuccess,
   onFailure,
   onClose,
 }) => {
   const [paymentStep, setPaymentStep] = useState<'loading' | 'qr' | 'processing' | 'success' | 'error'>('loading');
   const [paymentData, setPaymentData] = useState<any>(null);
-  const [countdown, setCountdown] = useState(60); // 60秒倒计时
+  const [countdown, setCountdown] = useState<number>(PAYMENT_CONFIG.TIMEOUT); // 使用配置的超时时间
   const [retryCountdown, setRetryCountdown] = useState(0); // 重试倒计时
   const pollingRef = useRef<any>(null); // 轮询定时器引用
 
@@ -91,15 +92,11 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
         throw new Error('CloudBase环境未初始化');
       }
       
-      console.log('CloudBase环境已初始化');
-      // 获取 auth 实例
-      const auth = cloudbaseApp.auth();
-      await auth.signInAnonymously();
-      const loginScope = await auth.loginScope();
-      // 如为匿名登录，则输出 true
-      // console.log("anonymous:", loginScope === "anonymous");
-      const outTradeNo = `PAY${Date.now()}${Math.floor(Math.random() * 100000)}`
-      // console.log('outTradeNo:', outTradeNo);
+        // 获取 auth 实例
+        const auth = cloudbaseApp.auth();
+        await auth.signInAnonymously();
+        const loginScope = await auth.loginScope();
+        const outTradeNo = `PAY${Date.now()}${Math.floor(Math.random() * 100000)}`
       const result = await cloudbaseApp.callFunction({
         name: 'order', // 云函数名称
         data: {
@@ -108,22 +105,19 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
         }
       });
       
-      // console.log('order result:', result);
-      
-      // 处理云函数返回结果
-      if (result && result.result && result.result.success) {
-        const paymentData = result.result;
-        
-        // 保存订单数据，包含 code_url
-        const orderData = {
-          ...paymentData,
-          out_trade_no: outTradeNo,
-          code_url: paymentData.code_url || paymentData.wxResponse?.code_url
-        };
-        
-        setPaymentData(orderData);
-        setPaymentStep('qr');
-        // console.log('支付二维码生成成功:', orderData);
+        // 处理云函数返回结果
+        if (result && result.result && result.result.success) {
+          const paymentData = result.result;
+          
+          // 保存订单数据，包含 code_url
+          const orderData = {
+            ...paymentData,
+            out_trade_no: outTradeNo,
+            code_url: paymentData.code_url || paymentData.wxResponse?.code_url
+          };
+          
+          setPaymentData(orderData);
+          setPaymentStep('qr');
         
         // 开始轮询支付状态，传入订单号
         startPaymentPolling(outTradeNo);
@@ -144,13 +138,10 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
       pollingRef.current = null;
     }
     
-    // console.log('开始支付状态轮询，订单号:', orderNo);
-    
-    // 使用3秒间隔进行轮询，平衡实时性和性能
+    // 使用配置间隔进行轮询，平衡实时性和性能
     pollingRef.current = setInterval(async () => {
       // 如果当前状态已经是成功或错误，停止轮询
       if (paymentStep === 'success' || paymentStep === 'error') {
-        // console.log('支付已完成，停止轮询');
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
           pollingRef.current = null;
@@ -162,7 +153,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
           const tradeNo = orderNo;
           
           if (!tradeNo) {
-            // console.log('订单号不可用，等待...');
+            
             return;
           }
 
@@ -172,7 +163,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
             return; // 如果环境未初始化，跳过轮询
           }
           
-          // console.log('正在查询订单状态，订单号:', tradeNo);
+          
           
           const result = await cloudbaseApp.callFunction({
             name: 'query_order', // 查询订单状态的云函数
@@ -183,8 +174,6 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
 
           const checkResult = result.result;
           
-          // console.log('轮询返回结果:', result);
-          // console.log('检查结果数据:', checkResult);
           
           // 检查新的返回结构
           if (checkResult && checkResult.success && checkResult.wechatOriginalResponse) {
@@ -193,18 +182,18 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
             if (wechatResponse.return_code === 'SUCCESS') {
               const tradeState = wechatResponse.trade_state;
               
-              // console.log('当前支付状态:', tradeState);
+              
               
               switch (tradeState) {
                 case 'SUCCESS':
                   // 支付成功
-                  // console.log('检测到支付成功，正在清理轮询并处理成功状态');
+                  
                   if (pollingRef.current) {
                     clearInterval(pollingRef.current);
                     pollingRef.current = null;
                   }
                   await handlePaymentSuccess();
-                  // console.log('支付成功处理完成');
+                  
                   break;
                 case 'CLOSED':
                   // 订单已关闭
@@ -232,14 +221,11 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
                   break;
                 case 'USERPAYING':
                   // 用户支付中，继续轮询
-                  console.log('用户支付中，继续等待...');
                   break;
                 case 'NOTPAY':
                   // 未支付，继续轮询
-                  console.log('订单未支付，继续等待...');
                   break;
                 default:
-                  console.log('未知支付状态:', tradeState);
               }
             } else {
               console.error('查询订单状态失败:', wechatResponse?.return_msg || '未知错误');
@@ -250,7 +236,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
         } catch (error) {
           console.error('轮询支付状态失败:', error);
         }
-    }, 3000);
+    }, PAYMENT_CONFIG.POLLING_INTERVAL);
 
     // 清理定时器
     return () => {
@@ -264,18 +250,16 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
   // 处理支付成功
   const handlePaymentSuccess = async () => {
     try {
-      console.log('开始处理支付成功');
       setPaymentStep('processing');
       
       // 保存支付状态到本地缓存
       await AsyncStorage.setItem('feishu_doc_paid', 'true');
       await AsyncStorage.setItem('payment_time', new Date().toISOString());
       
-      console.log('支付状态已保存，设置成功状态');
       setPaymentStep('success');
       
       setTimeout(() => {
-        console.log('执行成功回调');
+  
         onSuccess();
         onClose();
       }, 1500);
@@ -293,8 +277,8 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
     }
     Alert.alert('支付失败', errorMessage);
     
-    // 设置10秒重试倒计时
-    setRetryCountdown(10);
+    // 设置重试倒计时
+    setRetryCountdown(PAYMENT_CONFIG.RETRY_INTERVAL);
   };
 
   // 重新生成二维码
@@ -307,7 +291,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
   // 轮询会定期查询订单状态并更新页面状态
 
   const getAmountYuan = () => {
-    return (amount / 100).toFixed(2);
+    return PAYMENT_CONFIG.AMOUNT_YUAN;
   };
 
   return (
@@ -321,7 +305,6 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
           </View>
 
           {/* 金额显示 */}
-          <Text style={styles.amountLabel}>支付金额</Text>
           <Text style={styles.amount}>¥{getAmountYuan()}</Text>
 
           {/* 支付内容 */}
@@ -353,7 +336,8 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
 
               {/* 支付说明 */}
               <View style={styles.instructionContainer}>
-                <Text style={styles.instruction}>请使用微信扫描二维码支付</Text>
+                <Text style={styles.instruction}>付费权益绑定当前浏览器</Text>
+                <Text style={styles.instruction}>换浏览器或上网设备后需重新付费</Text>
                 <Text style={styles.countdownText}>剩余时间: {countdown}秒</Text>
               </View>
             </>

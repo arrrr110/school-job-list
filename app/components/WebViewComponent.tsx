@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PAYMENT_CONFIG } from '../config/payment';
 import WeChatNativePay from './WeChatNativePay';
 
 interface WebViewComponentProps {
@@ -43,7 +44,6 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
   const loadPaymentStatus = async () => {
     try {
       const savedPaymentStatus = await AsyncStorage.getItem('feishu_doc_paid');
-      console.log('加载本地缓存状态:', savedPaymentStatus);
       
       if (savedPaymentStatus === 'true' && onStatusChange) {
         onStatusChange(true);
@@ -61,23 +61,6 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
     setShowPaymentModal(false);
   };
 
-  const handleTestPayment = async () => {
-    try {
-      // 模拟支付成功
-      await AsyncStorage.setItem('feishu_doc_paid', 'true');
-      setShowPaymentModal(false);
-      
-      // 通知父组件更新解锁状态
-      if (onStatusChange) {
-        onStatusChange(true);
-      }
-      
-      Alert.alert('🎉 支付成功！', '已解锁完整内容');
-    } catch (error) {
-      console.error('支付测试失败:', error);
-      Alert.alert('错误', '支付测试失败，请重试');
-    }
-  };
 
     return (
     <>
@@ -111,7 +94,7 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
               style={styles.wechatButton} 
               onPress={handleShowPayment}
             >
-              <Text style={styles.wechatButtonText}>继续支付 ¥9.99</Text>
+              <Text style={styles.wechatButtonText}>继续支付 ¥{PAYMENT_CONFIG.AMOUNT_YUAN}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -120,7 +103,7 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
       {/* 微信Native支付弹窗 */}
       <WeChatNativePay
         visible={showPaymentModal}
-        amount={100} // 100分 = 1元
+        amount={PAYMENT_CONFIG.AMOUNT} // 使用配置文件中的金额
         onSuccess={() => {
           onStatusChange && onStatusChange(true);
           setShowPaymentModal(false);

@@ -7,6 +7,7 @@ import {
   View
 } from 'react-native';
 import WeChatNativePay from './WeChatNativePay';
+import { PAYMENT_CONFIG } from '../config/payment';
 
 interface PaymentUnlockComponentProps {
   isVisible: boolean;
@@ -68,10 +69,6 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
     setShowNativePay(false);
   };
 
-  const handleRealWeChatPay = () => {
-    // 直接调用Native支付
-    handleWeChatPay();
-  };
 
   return (
     <View style={styles.container}>
@@ -84,7 +81,7 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
           <View style={styles.leftSection}>
             <Text style={styles.title}>🔒 付费解锁</Text>
             <Text style={styles.description}>付费后查看完整文档</Text>
-            <Text style={styles.price}>¥9.99</Text>
+            <Text style={styles.price}>¥{PAYMENT_CONFIG.AMOUNT_YUAN}</Text>
           </View>
           
           <View style={styles.rightSection}>
@@ -99,7 +96,7 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
       {/* 微信Native支付组件 */}
       <WeChatNativePay
         visible={showNativePay}
-        amount={999} // 9.99元 = 999分
+        amount={PAYMENT_CONFIG.AMOUNT} // 使用配置文件中的金额
         onSuccess={handleNativePaySuccess}
         onFailure={handleNativePayFailure}
         onClose={handleNativePayClose}
