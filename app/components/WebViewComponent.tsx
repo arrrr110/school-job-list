@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { PAYMENT_CONFIG } from '../config/payment';
 import WeChatNativePay from './WeChatNativePay';
@@ -24,7 +24,7 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
 
   useEffect(() => {
     loadPaymentStatus();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // 根据解锁状态更新URL
@@ -41,7 +41,7 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
     }
   }, [isUnlocked]);
 
-  const loadPaymentStatus = async () => {
+  const loadPaymentStatus = useCallback(async () => {
     try {
       const savedPaymentStatus = await AsyncStorage.getItem('feishu_doc_paid');
       
@@ -51,15 +51,12 @@ const WebViewComponent: React.FC<WebViewComponentProps> = ({
     } catch (error) {
       console.error('加载缓存状态失败:', error);
     }
-  };
+  }, [onStatusChange]);
 
   const handleShowPayment = () => {
     setShowPaymentModal(true);
   };
 
-  const handleClosePaymentModal = () => {
-    setShowPaymentModal(false);
-  };
 
 
     return (

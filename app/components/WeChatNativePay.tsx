@@ -1,6 +1,6 @@
 import cloudbase from '@cloudbase/js-sdk';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -60,7 +60,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
         pollingRef.current = null;
       }
     };
-  }, [visible]);
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 重试倒计时效果
   useEffect(() => {
@@ -77,10 +77,10 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
     } else if (countdown === 0) {
       handlePaymentError('支付超时，请重新生成二维码');
     }
-  }, [countdown]);
+  }, [countdown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 生成支付二维码（调用云函数实现微信支付统一下单）
-  const generatePaymentQR = async () => {
+  const generatePaymentQR = useCallback(async () => {
     try {
       setPaymentStep('loading');
       setCountdown(60);
@@ -95,7 +95,6 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
         // 获取 auth 实例
         const auth = cloudbaseApp.auth();
         await auth.signInAnonymously();
-        const loginScope = await auth.loginScope();
         const outTradeNo = `PAY${Date.now()}${Math.floor(Math.random() * 100000)}`
       const result = await cloudbaseApp.callFunction({
         name: 'order', // 云函数名称
@@ -128,10 +127,10 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
       console.error('生成支付二维码失败:', error);
       handlePaymentError('生成支付二维码失败，请重试');
     }
-  };
+  }, [amount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 开始轮询支付状态
-  const startPaymentPolling = (orderNo: string) => {
+  const startPaymentPolling = useCallback((orderNo: string) => {
     // 清理现有的轮询
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -245,7 +244,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
         pollingRef.current = null;
       }
     };
-  };
+  }, [paymentStep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 处理支付成功
   const handlePaymentSuccess = async () => {
@@ -270,7 +269,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
   };
 
   // 处理支付错误
-  const handlePaymentError = (errorMessage: string) => {
+  const handlePaymentError = useCallback((errorMessage: string) => {
     setPaymentStep('error');
     if (onFailure) {
       onFailure(errorMessage);
@@ -279,7 +278,7 @@ const WeChatNativePay: React.FC<WeChatNativePayProps> = ({
     
     // 设置重试倒计时
     setRetryCountdown(PAYMENT_CONFIG.RETRY_INTERVAL);
-  };
+  }, [onFailure]);
 
   // 重新生成二维码
   const regenerateQR = () => {

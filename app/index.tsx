@@ -53,9 +53,6 @@ export default function Index() {
     setShowPayment(false);
   };
 
-  const handleShowPayment = () => {
-    setShowPayment(true);
-  };
 
   return (
     <View style={[styles.container, isFullScreen && styles.fullScreenContainer]}>

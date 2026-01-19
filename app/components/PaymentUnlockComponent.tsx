@@ -21,20 +21,16 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
   onClose,
 }) => {
   const [showNativePay, setShowNativePay] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<'paid' | 'unpaid'>('unpaid');
 
   const checkPaymentStatus = useCallback(async () => {
     try {
       const savedPaymentStatus = await AsyncStorage.getItem('feishu_doc_paid');
       if (savedPaymentStatus === 'true') {
-        setCurrentStatus('paid');
         // 如果已经付费，自动触发解锁
         setTimeout(() => {
           onUnlock();
           onClose();
         }, 500);
-      } else {
-        setCurrentStatus('unpaid');
       }
     } catch (error) {
       console.error('检查支付状态失败:', error);
@@ -47,13 +43,9 @@ const PaymentUnlockComponent: React.FC<PaymentUnlockComponentProps> = ({
     }
   }, [isVisible, checkPaymentStatus]);
 
-  const handleWeChatPay = async () => {
-    setShowNativePay(true);
-  };
 
   // 处理Native支付成功
   const handleNativePaySuccess = () => {
-    setCurrentStatus('paid');
     setShowNativePay(false);
     onUnlock();
     onClose();
